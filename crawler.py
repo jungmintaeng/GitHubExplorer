@@ -12,12 +12,13 @@ GITHUB_URL = 'https://github.com'
 # cur_depth 2+++ -> file, folders
 # tree / blob 이 폴더와 파일을 구분하는 키워드이며 이것은 url.split 5번 인덱스
 
-def clearTree():
+
+def clear_tree():
     docTree.delete(0, END)
     typeTree.delete(0, END)
 
 
-def getHTML(url):
+def get_html(url):
     try:
         page = urllib.request.urlopen(url)
         html = page.read()
@@ -27,13 +28,13 @@ def getHTML(url):
         return None
 
 
-def gitRepositorySearch(*event):
+def git_repository_search(*event):
     global docTree, cur_depth, gitIDEntry, GITHUB_URL
-    clearTree()
+    clear_tree()
     if gitIDEntry.get() == "":
         messagebox.showwarning("ID 입력", "GitHub ID를 입력하세요")
         return
-    html = getHTML(GITHUB_URL + '/' + gitIDEntry.get() + "?tab=repositories")
+    html = get_html(GITHUB_URL + '/' + gitIDEntry.get() + "?tab=repositories")
     if html is None:
         messagebox.showerror("GItHub URL Error", "해당 아이디는 존재하지 않습니다.")
         return
@@ -42,39 +43,39 @@ def gitRepositorySearch(*event):
     if count is None:
         docTree.insert('end', 'Repository 가 존재하지 않습니다.')
         return
-    repositoryCount = int(soup.find(title='Repositories').find('span', class_='Counter').get_text().rstrip().lstrip())
-    if repositoryCount < 1:
+    repository_count = int(soup.find(title='Repositories').find('span', class_='Counter').get_text().rstrip().lstrip())
+    if repository_count < 1:
         docTree.insert('end', 'Repository 가 존재하지 않습니다.')
     else:
-        repDict = dict()
-        repList = soup.find('div', id='user-repositories-list').select('ul > li')
-        for i in range(len(repList)):
-            name = repList[i].select('h3')[0].get_text().rstrip().lstrip()
-            repDict[name] = GITHUB_URL + repList[i].select('h3 > a')[0]['href']
+        rep_dict = dict()
+        rep_list = soup.find('div', id='user-repositories-list').select('ul > li')
+        for i in range(len(rep_list)):
+            name = rep_list[i].select('h3')[0].get_text().rstrip().lstrip()
+            rep_dict[name] = GITHUB_URL + rep_list[i].select('h3 > a')[0]['href']
             docTree.insert('end', name)
             typeTree.insert('end', 'REPOSITORY')
-        treeStack.append(repDict)
+        treeStack.append(rep_dict)
         cur_depth += 1
 
 
-def takeToNextLevel(row_type, url):
+def take_to_next_level(row_type, url):
     global cur_depth, treeStack, sourceText
     if row_type == 'Repository' or row_type == 'Folder':
-        html = getHTML(url)
+        html = get_html(url)
         if html is None:
             messagebox.showerror("GItHub URL Error", "잘못된 경로입니다.")
             return
         soup = BeautifulSoup(html, 'html.parser')
         soup = soup.select('tr.js-navigation-item > td.content > span > a')
-        treeDict = dict()
+        tree_dict = dict()
         for listItem in soup:
-            newName = listItem.get_text()
-            newUrl = GITHUB_URL + listItem['href']
-            treeDict[newName] = newUrl
-        treeStack.append(treeDict)
+            new_name = listItem.get_text()
+            new_url = GITHUB_URL + listItem['href']
+            tree_dict[new_name] = new_url
+        treeStack.append(tree_dict)
         cur_depth += 1
     elif row_type == 'File':
-        html = getHTML(url)
+        html = get_html(url)
         if html is None:
             messagebox.showerror("GItHub URL Error", "잘못된 경로입니다.")
             return
@@ -90,22 +91,22 @@ def takeToNextLevel(row_type, url):
         sourceText.config(state=DISABLED)
 
 
-def takeToPrevLevel(*args):
+def take_to_prev_level(*args):
     global cur_depth, treeStack
     if cur_depth < 2:
         return
     cur_depth -= 1
     treeStack.pop()
-    refreshListView()
+    refresh_list_view()
 
 
-def refreshListView():
+def refresh_list_view():
     global treeStack, typeTree
-    clearTree()
-    treeDict = treeStack[-1]
-    for name in treeDict.keys():
+    clear_tree()
+    tree_dict = treeStack[-1]
+    for name in tree_dict.keys():
         docTree.insert('end', name)
-        split = treeDict[name].split('/')
+        split = tree_dict[name].split('/')
         if len(split) < 6:
             typeTree.insert('end', 'REPOSITORY')
         elif split[5] == 'tree':
@@ -114,7 +115,7 @@ def refreshListView():
             typeTree.insert('end', 'FILE')
 
 
-def listboxDoubleClicked(*event):
+def listbox_double_clicked(*event):
     global docTree, cur_depth
     if cur_depth < 1:
         return
@@ -129,8 +130,8 @@ def listboxDoubleClicked(*event):
         row_type = 'Folder'
     elif split[5] == 'blob':    # file
         row_type = 'File'
-    takeToNextLevel(row_type, url)
-    refreshListView()
+    take_to_next_level(row_type, url)
+    refresh_list_view()
 
 
 # file, folder - soup.select('tr.js-navigation-item > td.content')
@@ -147,16 +148,16 @@ rightFrame = Frame(rootWindow, borderwidth=2, relief='groove')
 Label(leftFrame, text='GitHub ID').grid(row=0, column=0, padx=10)
 # ID Entry
 gitIDEntry = Entry(leftFrame)
-gitIDEntry.bind("<Return>", gitRepositorySearch)
+gitIDEntry.bind("<Return>", git_repository_search)
 gitIDEntry.grid(row=0, column=1)
 # Search Button
-Button(leftFrame, text='Repository Search', command=gitRepositorySearch).grid(row=0, column=2, padx=10)
+Button(leftFrame, text='Repository Search', command=git_repository_search).grid(row=0, column=2, padx=10)
 # back button
-Button(leftFrame, text='Back', command=takeToPrevLevel).grid(row=1, column=0, padx=10)
+Button(leftFrame, text='Back', command=take_to_prev_level).grid(row=1, column=0, padx=10)
 # TreeView
 docTree = Listbox(leftFrame)
 docTree.grid(row=2, column=0, columnspan=2, sticky=W+E+S+N)
-docTree.bind('<Double-1>', listboxDoubleClicked)
+docTree.bind('<Double-1>', listbox_double_clicked)
 # Type listbox
 typeTree = Listbox(leftFrame)
 typeTree.grid(row=2, column=2, sticky=W+E+S+N)
